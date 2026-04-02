@@ -9,16 +9,33 @@ if(builder.Environment.IsDevelopment())
         options.UseSqlServer(builder.Configuration.GetConnectionString("MyDbConnection")));
     builder.Services.AddDistributedMemoryCache();
 }
-// else
-// {
-//     builder.Services.AddDbContext<MyDatabaseContext>(options =>
-//         options.UseSqlServer(builder.Configuration.GetConnectionString("AZURE_SQL_CONNECTIONSTRING")));
-//     builder.Services.AddStackExchangeRedisCache(options =>
-//     {
-//     options.Configuration = builder.Configuration["AZURE_REDIS_CONNECTIONSTRING"];
-//     options.InstanceName = "SampleInstance";
-//     });
-// }
+else
+{
+    var sqlConnectionString =
+        builder.Configuration.GetConnectionString("AZURE_SQL_CONNECTIONSTRING")
+        ?? builder.Configuration["AZURE_SQL_CONNECTIONSTRING"];
+    var redisConnectionString =
+        builder.Configuration.GetConnectionString("AZURE_REDIS_CONNECTIONSTRING")
+        ?? builder.Configuration["AZURE_REDIS_CONNECTIONSTRING"];
+
+    if (string.IsNullOrWhiteSpace(sqlConnectionString))
+    {
+        throw new InvalidOperationException("Missing required connection string: AZURE_SQL_CONNECTIONSTRING");
+    }
+
+    if (string.IsNullOrWhiteSpace(redisConnectionString))
+    {
+        throw new InvalidOperationException("Missing required connection string: AZURE_REDIS_CONNECTIONSTRING");
+    }
+
+    builder.Services.AddDbContext<MyDatabaseContext>(options =>
+        options.UseSqlServer(sqlConnectionString));
+    builder.Services.AddStackExchangeRedisCache(options =>
+    {
+        options.Configuration = redisConnectionString;
+        options.InstanceName = "SampleInstance";
+    });
+}
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
